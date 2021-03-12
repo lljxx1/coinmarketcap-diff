@@ -1,0 +1,187 @@
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.24.0/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.21.1/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ant-design-vue@1.7.2/dist/antd.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/ant-design-vue@1.7.2/dist/antd.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+
+           <div style="margin: 25px">
+          <div style="margin: 10px 0;">
+            Form: {{lastDate}}  To: {{ today }} <a-select default-value="month" style="width: 120px" @change="handleChange">
+    
+      <a-select-option value="month">
+        月
+      </a-select-option>
+      <a-select-option value="2month">
+        2个月
+      </a-select-option>
+      <a-select-option value="3month">
+        3个月
+      </a-select-option>
+      <a-select-option value="halfyear">
+        半年
+      </a-select-option>
+       <a-select-option value="onyear">
+        一年
+      </a-select-option>
+    </a-select>
+
+          </div>
+            <a-table bordered :columns="viewColumns" :data-source="rows" :pagination="paginationProps">
+                <div slot="linkd" slot-scope="text,record">
+                    <a :href="text" target="_blank">{{ text }}</a>
+                </div>
+            </a-table>
+           </div>
+    </div>
+    <script>
+        //   Vue.use(VueLazyload);
+        var app = new Vue({
+            el: '#app',
+            data: {
+                lastDate: moment().subtract(30, 'day').format('YYYYMMDD'),
+                today: moment().subtract(1, 'day').format('YYYYMMDD'),
+                viewColumns: [
+                    {
+                        title: 'Rank',
+                        dataIndex: 'cmc_rank'
+                    },
+                    {
+                        title: 'Symbol',
+                        dataIndex: 'symbol'
+                    },
+                    {
+                        title: 'Name',
+                        dataIndex: 'name'
+                    },
+                    {
+                        title: 'Price',
+                        dataIndex: 'price'
+                    },
+                    {
+                        title: 'lastPrice',
+                        dataIndex: 'last_price'
+                    },
+                    {
+                        title: 'Rank Change',
+                        dataIndex: 'ranke_change',
+                        sorter: (a, b) => {
+                            return a['ranke_change'] - b['ranke_change']
+                        }
+                    },
+                    {
+                        title: 'Price Change',
+                        dataIndex: 'price_change',
+                        sorter: (a, b) => {
+                            return a['price_change'] - b['price_change']
+                        }
+                    },
+                    {
+                        title: 'Price all_tags',
+                        dataIndex: 'all_tags'
+                    },
+                    {
+                        title: 'detail_url',
+                        dataIndex: 'detail_url',
+                        scopedSlots: {
+                            customRender: 'linkd'
+                        }
+                    }
+                    
+                ],
+                rows: []
+            },
+            watch: {
+                lastDate() {
+                    this.loadAndCompare()
+                }
+            },
+            computed: {
+                paginationProps() {
+                    return {
+                        showSizeChanger: true,
+                        current: this.currentPage,
+                        pageSizeOptions: ['25', '96', '200', '800'],
+                        defaultPageSize: 200,
+                        showTotal: total => `全部 ${total} 结果`,
+                        onChange: (page, pageSize) => {
+                            this.currentPage = page
+                            console.log(page, pageSize)
+                            this.goTop();
+                        }
+                    }
+                }
+            },
+            mounted() {
+                console.log('start load')
+                this.loadAndCompare()
+            },
+            methods: {
+                handleChange(type){
+                    var dayas = {
+                        month: 30,
+                        '2month': 60,
+                        '3month': 90,
+                        'halfyear': 180,
+                        'onyear': 360
+                    }
+                    var daysTo = dayas[type] ? dayas[type] : 30
+                    this.lastDate = moment().subtract(daysTo, 'day').format('YYYYMMDD');
+                },
+                async loadPage(url) {
+                    const { data } = await axios.get('https://api.wechatsync.com/music/http', {
+                        params: {
+                            url: url
+                        }
+                    })
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(data.response, 'text/html')
+                    var dataEl = doc.querySelector('#__NEXT_DATA__')
+                    if(!dataEl) throw Error('not found data')
+                    return JSON.parse(dataEl.innerText);
+                },
+                async loadAndCompare() {
+                    const allData = await Promise.all([
+                        this.lastDate,
+                        this.today
+                    ].map(_ => {
+                        return this.loadPage(`https://coinmarketcap.com/historical/${_}/`)
+                    }))
+                    var dataRows = allData.map(_ => {
+                        return _.props.initialState.cryptocurrency.listingHistorical
+                    });
+
+                    var lastHistory = dataRows[0]
+                    this.rows = dataRows[1].data.map(_ => {
+                        var lastState = lastHistory.data.filter(c => c.name == _.name)[0];
+                        _.ranke_change = lastState ? lastState.cmc_rank - _.cmc_rank : null
+                        _.last_state = lastState
+                        _.price = _.quote && _.quote.USD.price.toFixed(4)
+                        _.last_price = lastState && lastState.quote.USD.price.toFixed(4)
+                        _.price_change = Math.floor(((_.price - _.last_price) / _.last_price) * 100 )
+                        _.price_change = isNaN(_.price_change) ? 0 : _.price_change
+                        _.all_tags = _.tags.join(",")
+                        _.detail_url = `https://coinmarketcap.com/currencies/${_.slug}/`
+                        return _;
+                    })
+                    // this.rows = dataRows[1].data
+                    console.log(this.rows)
+                }
+
+            },
+        })
+
+
+    </script>
+</body>
+
+</html>
