@@ -12,35 +12,67 @@
 </head>
 
 <body>
+    <style>
+
+        body {
+            font-size: 12px;
+        }
+
+        .isUp {
+            color: #16c784
+        }
+
+        .isDown{
+             color: #ea3943
+         }
+    </style>
     <div id="app">
 
            <div style="margin: 25px">
           <div style="margin: 10px 0;">
-            Form: {{lastDate}}  To: {{ today }} <a-select default-value="month" style="width: 120px" @change="handleChange">
-    
-      <a-select-option value="month">
-        月
-      </a-select-option>
-      <a-select-option value="2month">
-        2个月
-      </a-select-option>
-      <a-select-option value="3month">
-        3个月
-      </a-select-option>
-      <a-select-option value="halfyear">
-        半年
-      </a-select-option>
-       <a-select-option value="onyear">
-        一年
-      </a-select-option>
-    </a-select>
+
+          <div>
+            <a-range-picker 
+            :ranges="dateRanges" 
+            :default-value="dateRanges['最近7天']" 
+            @change="onChange"
+                :style="{width: '270px'}">
+            </a-range-picker>
+          </div>  
+
 
           </div>
-            <a-table bordered :columns="viewColumns" :data-source="rows" :pagination="paginationProps">
+          
+<div>
+        <!-- <a-spin v-if="loading"></a-spin> -->
+            <a-table :loading="loading" bordered :columns="viewColumns" :data-source="rows" :pagination="paginationProps">
+                <div slot="name" slot-scope="text,record">
+                    <span style="color: black">{{ text }} </span>
+                    <span style="color: #bbb">{{ record.symbol }}</span>
+                    <!-- <a :href="text" target="_blank">CoinMP</a> -->
+                    <!-- <a :href="'https://weixin.sogou.com/weixin?type=2&query='+ encodeURIComponent(record.name)" target="_blank">公众号</a> -->
+                </div>
+
                 <div slot="linkd" slot-scope="text,record">
-                    <a :href="text" target="_blank">{{ text }}</a>
+                    <a :href="text" target="_blank">CoinMP</a>
+                    <a :href="'https://weixin.sogou.com/weixin?type=2&query='+ encodeURIComponent(record.name)" target="_blank">公众号</a>
+                </div>
+                <div slot="arrowstatus" :class="{isUp: text > 0, isDown: text < 0}" slot-scope="text,record">
+                    {{ text }} %
+                </div>
+
+                <div slot="currency" slot-scope="text,record">
+                    ${{ text }}
+                </div>
+
+                <div slot="arrowcurrenc" :class="{isUp: text > 0, isDown: text < 0}" slot-scope="text,record">
+                    {{ text }}
+                </div>
+                <div slot="tags" slot-scope="text,record">
+                    <a-tag v-for="t in text" style="margin-bottom: 5px;">{{ t }}</a-tag>
                 </div>
             </a-table>
+            </div>
            </div>
     </div>
     <script>
@@ -48,32 +80,62 @@
         var app = new Vue({
             el: '#app',
             data: {
-                lastDate: moment().subtract(30, 'day').format('YYYYMMDD'),
+                loading: false,
+                dateRanges: {
+                    // '昨天': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    '最近7天': [moment().subtract(8, 'days'), moment().subtract(1, 'days')],
+                    '本月': [moment().startOf('month'), moment().subtract(1, 'days')],
+                    '30天': [moment().subtract(31, 'days'), moment().subtract(1, 'days')],
+                    '2月': [moment().subtract(60, 'days'), moment().subtract(1, 'days')],
+                    '3月': [moment().subtract(90, 'days'), moment().subtract(1, 'days')],
+                    '4月': [moment().subtract(120, 'days'), moment().subtract(1, 'days')],
+                    '半年': [moment().subtract(180, 'days'), moment().subtract(1, 'days')],
+                    '一年': [moment().subtract(360, 'days'), moment().subtract(1, 'days')],
+                    '二年': [moment().subtract(720, 'days'), moment().subtract(1, 'days')],
+                    '三年': [moment().subtract(1080, 'days'), moment().subtract(1, 'days')]
+                },
+                lastDate: moment().subtract(8, 'day').format('YYYYMMDD'),
                 today: moment().subtract(1, 'day').format('YYYYMMDD'),
                 viewColumns: [
                     {
                         title: 'Rank',
-                        dataIndex: 'cmc_rank'
+                        dataIndex: 'cmc_rank',
+                        scopedSlots: {
+                            filterDropdown: 'filterDropdown',
+                            filterIcon: 'filterIcon',
+                        },
                     },
-                    {
-                        title: 'Symbol',
-                        dataIndex: 'symbol'
-                    },
+                    // {
+                    //     title: 'Symbol',
+                    //     dataIndex: 'symbol'
+                    // },
                     {
                         title: 'Name',
-                        dataIndex: 'name'
+                        dataIndex: 'name',
+                        scopedSlots: {
+                            customRender: 'name'
+                        },
                     },
                     {
                         title: 'Price',
-                        dataIndex: 'price'
+                        dataIndex: 'price',
+                        scopedSlots: {
+                            customRender: 'currency'
+                        },
                     },
                     {
-                        title: 'lastPrice',
-                        dataIndex: 'last_price'
+                        title: 'Last Price',
+                        dataIndex: 'last_price',
+                        scopedSlots: {
+                            customRender: 'currency'
+                        },
                     },
                     {
                         title: 'Rank Change',
                         dataIndex: 'ranke_change',
+                        scopedSlots: {
+                            customRender: 'arrowcurrenc'
+                        },
                         sorter: (a, b) => {
                             return a['ranke_change'] - b['ranke_change']
                         }
@@ -81,20 +143,26 @@
                     {
                         title: 'Price Change',
                         dataIndex: 'price_change',
+                        scopedSlots: {
+                            customRender: 'arrowstatus'
+                        },
                         sorter: (a, b) => {
                             return a['price_change'] - b['price_change']
                         }
                     },
                     {
-                        title: 'Price all_tags',
-                        dataIndex: 'all_tags'
-                    },
-                    {
-                        title: 'detail_url',
+                        title: 'Detail',
                         dataIndex: 'detail_url',
                         scopedSlots: {
                             customRender: 'linkd'
                         }
+                    },
+                    {
+                        title: 'Tags',
+                        dataIndex: 'all_tags',
+                        scopedSlots: {
+                            customRender: 'tags'
+                        },
                     }
                     
                 ],
@@ -126,6 +194,18 @@
                 this.loadAndCompare()
             },
             methods: {
+                onChange(dates, dateStrings) {
+                    // var start = 
+                    dateStrings = dateStrings.map(_ => _.split('-').join(''))
+                    console.log('From: ', dateStrings[0], ', to: ', dateStrings[1])
+                    this.lastDate = dateStrings[0]
+                    this.today = dateStrings[1]
+                    // this.setDateRange({
+                    //     startDate: dateStrings[0],
+                    //     endDate: dateStrings[1]
+                    // })
+
+                },
                 handleChange(type){
                     var dayas = {
                         month: 30,
@@ -137,7 +217,7 @@
                     var daysTo = dayas[type] ? dayas[type] : 30
                     this.lastDate = moment().subtract(daysTo, 'day').format('YYYYMMDD');
                 },
-                async loadPage(url) {
+                async loadPage(url, day) {
                     const { data } = await axios.get('https://api.wechatsync.com/music/http', {
                         params: {
                             url: url
@@ -150,12 +230,16 @@
                     return JSON.parse(dataEl.innerText);
                 },
                 async loadAndCompare() {
+
+                    this.loading = true
                     const allData = await Promise.all([
                         this.lastDate,
                         this.today
                     ].map(_ => {
-                        return this.loadPage(`https://coinmarketcap.com/historical/${_}/`)
+                        return this.loadPage(`https://coinmarketcap.com/historical/${_}/`, _)
                     }))
+
+                    this.loading = false
                     var dataRows = allData.map(_ => {
                         return _.props.initialState.cryptocurrency.listingHistorical
                     });
@@ -165,11 +249,12 @@
                         var lastState = lastHistory.data.filter(c => c.name == _.name)[0];
                         _.ranke_change = lastState ? lastState.cmc_rank - _.cmc_rank : null
                         _.last_state = lastState
-                        _.price = _.quote && _.quote.USD.price.toFixed(4)
-                        _.last_price = lastState && lastState.quote.USD.price.toFixed(4)
+                        _.price = _.quote &&  (_.quote.USD.price < 1 ? _.quote.USD.price.toFixed(4) : _.quote.USD.price.toFixed(1))
+                        _.last_price = lastState && (lastState.quote.USD.price < 1 ? lastState.quote.USD.price.toFixed(4) : lastState.quote.USD.price.toFixed(1))
                         _.price_change = Math.floor(((_.price - _.last_price) / _.last_price) * 100 )
                         _.price_change = isNaN(_.price_change) ? 0 : _.price_change
-                        _.all_tags = _.tags.join(",")
+                        // _.all_tags = _.tags.join(",")
+                        _.all_tags = _.tags
                         _.detail_url = `https://coinmarketcap.com/currencies/${_.slug}/`
                         return _;
                     })
