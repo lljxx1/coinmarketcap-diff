@@ -56,7 +56,7 @@
 
                 <div slot="linkd" slot-scope="text,record">
                     <a :href="text" target="_blank">CoinMP</a>
-                    <a :href="'https://weixin.sogou.com/weixin?type=2&query='+ encodeURIComponent(record.name)" target="_blank">公众号</a>
+                    <a :href="'https://weixin.sogou.com/weixin?type=2&query='+ encodeURIComponent(record.search_name)" target="_blank">公众号</a>
                 </div>
                 <div slot="arrowstatus" :class="{isUp: text > 0, isDown: text < 0}" slot-scope="text,record">
                     {{ text }} %
@@ -254,6 +254,7 @@
                         _.last_price = lastState && (lastState.quote.USD.price < 1 ? lastState.quote.USD.price.toFixed(4) : lastState.quote.USD.price.toFixed(1))
                         _.price_change = Math.floor(((_.price - _.last_price) / _.last_price) * 100 )
                         _.price_change = isNaN(_.price_change) ? 0 : _.price_change
+                        _.search_name = `"${_.name}"`;
                         // _.all_tags = _.tags.join(",")
                         _.all_tags = _.tags
                         _.detail_url = `https://coinmarketcap.com/currencies/${_.slug}/`
