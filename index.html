@@ -197,7 +197,7 @@
                         showSizeChanger: true,
                         current: this.currentPage,
                         pageSizeOptions: ['25', '96', '200', '800'],
-                        defaultPageSize: 200,
+                        defaultPageSize: 600,
                         showTotal: total => `全部 ${total} 结果`,
                         onChange: (page, pageSize) => {
                             this.currentPage = page
@@ -216,8 +216,8 @@
                     // var start = 
                     dateStrings = dateStrings.map(_ => _.split('-').join(''))
                     console.log('From: ', dateStrings[0], ', to: ', dateStrings[1])
-                    this.lastDate = dateStrings[0]
-                    this.today = dateStrings[1]
+                    this.lastDate = moment(dateStrings[0]).format('YYYY-MM-DD');
+                    this.today = moment(dateStrings[1]).format('YYYY-MM-DD');
                     // this.setDateRange({
                     //     startDate: dateStrings[0],
                     //     endDate: dateStrings[1]
