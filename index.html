@@ -31,22 +31,33 @@
 
            <div style="margin: 25px">
           <div style="margin: 10px 0;">
-
-          <div>
-            <a-range-picker 
-            :ranges="dateRanges" 
-            :default-value="dateRanges['最近7天']" 
-            @change="onChange"
-                :style="{width: '270px'}">
-            </a-range-picker>
-          </div>  
+            <a-select v-model="rangePick">
+                <a-select-option v-for="i in allRange">
+                    {{ i.name }}
+                </a-select-option>
+            </a-select>
 
 
+            <div>
+                <a-range-picker 
+                :ranges="dateRanges" 
+                :default-value="dateRanges['最近7天']" 
+                @change="onChange"
+                    :style="{width: '270px'}">
+                </a-range-picker>
+                <span style="margin-left: 10px">rank:
+                    <a-radio-group v-model="rangePick">
+                        <a-radio-button :value="i.name" v-for="i in allRange">
+                            {{ i.name }}
+                        </a-radio-button>
+                    </a-radio-group>
+                </span>
+            </div>  
           </div>
           
 <div>
         <!-- <a-spin v-if="loading"></a-spin> -->
-            <a-table :loading="loading" bordered :columns="viewColumns" :data-source="rows" :pagination="paginationProps">
+            <a-table :loading="loading" bordered :columns="viewColumns" :data-source="pageRows" :pagination="paginationProps">
                 <div slot="name" slot-scope="text,record">
                     <span style="color: black">{{ text }} </span>
                     <span style="color: #bbb">{{ record.symbol }}</span>
@@ -81,7 +92,26 @@
         var app = new Vue({
             el: '#app',
             data: {
+                rangePick: null,
                 loading: false,
+                allRange: [
+                    {
+                        range: [0, 300],
+                        name: '0-300'
+                    },
+                    {
+                        range: [300, 1000],
+                        name: '300-1000'
+                    },
+                    {
+                        range: [1000, 2000],
+                        name: '1000-2000'
+                    },
+                    {
+                        range: [2000, 3000],
+                        name: '2000-3000'
+                    }
+                ],
                 dateRanges: {
                     // '昨天': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
                     '最近7天': [moment().subtract(8, 'days'), moment().subtract(1, 'days')],
@@ -189,9 +219,26 @@
             watch: {
                 lastDate() {
                     this.loadAndCompare()
-                }
+                },
+              
             },
             computed: {
+                currentRage() {
+                    if (!this.rangePick) return null;
+                    const range = this.allRange.find(_ => _.name == this.rangePick)
+                    return range;
+                },
+
+                pageRows() {
+                    if (!this.rows) return [];
+                    return this.rows.filter(_ => {
+                        if (this.currentRage) {
+                            const isInRage = _.cmc_rank > this.currentRage.range[0] && _.cmc_rank  < this.currentRage.range[1] 
+                            return isInRage;
+                        }
+                        return _;
+                    });
+                },
                 paginationProps() {
                     return {
                         showSizeChanger: true,
@@ -224,6 +271,9 @@
                     // })
 
                 },
+                handleRange() {
+
+                },
                 handleChange(type){
                     var dayas = {
                         month: 30,
@@ -236,7 +286,7 @@
                     this.lastDate = moment().subtract(daysTo, 'day').format('YYYY-MM-DD');
                 },
                 async loadPage(url, day) {
-                    const apiUrl = `https://web-api.coinmarketcap.com/v1/cryptocurrency/listings/historical?convert=USD,BTC&date=${day}&limit=600`
+                    const apiUrl = `https://web-api.coinmarketcap.com/v1/cryptocurrency/listings/historical?convert=USD,BTC&date=${day}&limit=3000`
                     const { data } = await axios.get('https://api.wechatsync.com/music/http', {
                         params: {
                             url: apiUrl
@@ -270,8 +320,8 @@
                         var lastState = lastHistory.data.filter(c => c.name == _.name)[0];
                         _.ranke_change = lastState ? lastState.cmc_rank - _.cmc_rank : null
                         _.last_state = lastState
-                        _.price = _.quote &&  (_.quote.USD.price < 1 ? _.quote.USD.price.toFixed(4) : _.quote.USD.price.toFixed(1))
-                        _.last_price = lastState && (lastState.quote.USD.price < 1 ? lastState.quote.USD.price.toFixed(4) : lastState.quote.USD.price.toFixed(1))
+                        _.price = _.quote &&  (_.quote.USD.price < 1 ? _.quote.USD.price.toFixed(12) : _.quote.USD.price.toFixed(1))
+                        _.last_price = lastState && (lastState.quote.USD.price < 1 ? lastState.quote.USD.price.toFixed(12) : lastState.quote.USD.price.toFixed(1))
                         _.price_change = Math.floor(((_.price - _.last_price) / _.last_price) * 100 )
                         _.price_change = isNaN(_.price_change) ? 0 : _.price_change
                         _.search_name = `"${_.name}"`;
